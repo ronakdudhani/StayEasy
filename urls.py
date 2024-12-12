@@ -12,3 +12,4 @@ urlpatterns = [
     # path('users/', include('users.urls')),
     # path('bookings/', include('bookings.urls')),
 ]
+# Changes made on 2024-12-12

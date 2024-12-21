@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airbnb Clone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+</head>
+<body class="font-sans antialiased">
+
+    <nav class="flex items-center justify-between px-8 py-4 shadow-md">
+        <!-- Logo -->
+        <div class="flex items-center">
+            <a href="/"> 
+                <span class="text-red-500 text-xl font-semibold ml-2">StayEasy</span>
+            </a>
+        </div>
+    
+        <!-- Search Form -->
+        <form id="searchForm" action="{% url 'property:property_listing' %}" method="GET" class="flex items-center bg-white rounded-full shadow-md px-4 py-2 space-x-4 relative z-20">
+            <!-- "Where" Field -->
+            <div class="flex flex-col">
+                <label class="text-gray-500 text-sm">Where</label>
+                <input type="text" id="location-search" placeholder="Search destinations" class="focus:outline-none text-gray-700">
+                <ul id="location-results" class="bg-white border rounded shadow-lg hidden w-full mt-1 absolute z-50 max-h-60 overflow-auto"></ul>
+            </div>
+    
+            <!-- Hidden Fields for Latitude and Longitude -->
+            <input type="hidden" id="lat" name="lat">
+            <input type="hidden" id="lon" name="lon">
+    
+            <!-- Other form fields -->
+            <div class="border-l h-6"></div>
+            <div class="flex flex-col">
+                <label class="text-gray-500 text-sm">Check-in</label>
+                <input type="date" class="focus:outline-none text-gray-700">
+            </div>
+            <div class="border-l h-6"></div>
+            <div class="flex flex-col">
+                <label class="text-gray-500 text-sm">Check-out</label>
+                <input type="date" class="focus:outline-none text-gray-700">
+            </div>
+            <div class="border-l h-6"></div>
+            <div class="flex flex-col">
+                <label class="text-gray-500 text-sm">Who</label>
+                <input type="number" placeholder="Add guests" class="focus:outline-none text-gray-700">
+            </div>
+    
+            <!-- Search Button -->
+            <button id="searchBtn" type="submit" class="bg-red-500 text-white p-2 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l-4-4m0 0l4-4m-4 4h16"></path>
+                </svg>
+            </button>
+        </form>
+    
+        <!-- Dynamic Navigation Links -->
+        <div class="flex items-center space-x-4">
+            {% if user.is_authenticated %}
+                <!-- Add Listing (Visible only to logged-in users) -->
+                <a href="{% url 'property:add_property_step1' %}" class="text-gray-700 hover:underline">Add Listing</a>
+    
+                <!-- Dropdown for Logged-in Users -->
+                <div class="relative">
+                    <!-- Profile Button -->
+                    <button id="profileDropdownButton" class="flex items-center space-x-2 text-gray-700 hover:bg-gray-200 p-2 rounded-full">
+                        <div class="bg-gray-800 text-white rounded-full h-8 w-8 flex items-center justify-center">
+                            {{ user.first_name|default:user.username|slice:":1"|upper }}
+                        </div>
+                        <span>{{ user.username }}</span>
+                    </button>
+    
+                    <!-- Dropdown Menu -->
+                    <div id="profileDropdownMenu" class="absolute right-0 mt-2 bg-white shadow-lg rounded-lg hidden">
+                        <a href="{% url 'users:profile' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">My Profile</a>
+                        <a href="{% url 'users:user_properties' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">My Properties</a>
+                        <a href="{% url 'bookings:my_bookings' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">My Bookings</a>
+                        <a href="{% url 'users:settings' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">Settings</a>
+                        <a href="{% url 'users:logout' %}" class="block px-4 py-2 text-gray-700 hover:bg-gray-200">Logout</a>
+                    </div>
+                </div>
+            {% else %}
+                <!-- Links for Logged-out Users -->
+                <a href="{% url 'users:login' %}" class="text-gray-700 hover:underline">Login</a>
+                <a href="{% url 'users:signup' %}" class="text-gray-700 hover:underline">Sign Up</a>
+            {% endif %}
+        </div>
+    </nav>
+    
+    
+    
+    
+
+
+    <!-- Property Listing Section -->
+    {% comment %} <section class="p-8">
+        <h2 class="text-2xl font-bold mb-4">Available Properties</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Property Card 1 -->
+            <div class="border rounded-lg shadow-lg overflow-hidden">
+                <img src="https://source.unsplash.com/400x300/?house" alt="Property 1" class="w-full h-48 object-cover">
+                <div class="p-4">
+                    <h3 class="font-semibold text-lg">Cozy Beach House</h3>
+                    <p class="text-gray-500">Malibu, California</p>
+                    <p class="text-red-500 font-bold mt-2">$200/night</p>
+                </div>
+            </div>
+            <!-- Property Card 2 -->
+            <div class="border rounded-lg shadow-lg overflow-hidden">
+                <img src="https://source.unsplash.com/400x300/?cabin" alt="Property 2" class="w-full h-48 object-cover">
+                <div class="p-4">
+                    <h3 class="font-semibold text-lg">Mountain Cabin</h3>
+                    <p class="text-gray-500">Aspen, Colorado</p>
+                    <p class="text-red-500 font-bold mt-2">$150/night</p>
+                </div>
+            </div>
+            <!-- Property Card 3 -->
+            <div class="border rounded-lg shadow-lg overflow-hidden">
+                <img src="https://source.unsplash.com/400x300/?apartment" alt="Property 3" class="w-full h-48 object-cover">
+                <div class="p-4">
+                    <h3 class="font-semibold text-lg">Luxury Apartment</h3>
+                    <p class="text-gray-500">New York, NY</p>
+                    <p class="text-red-500 font-bold mt-2">$300/night</p>
+                </div>
+            </div>
+        </div>
+    </section> {% endcomment %}
+    {% block content %}
+    {% endblock %}
+
+</body>
+<script>
+    document.getElementById('searchForm').addEventListener('submit', function (e) {
+        e.preventDefault(); // Prevent default form submission
+    
+        const location = document.getElementById('location-search').value;
+    
+        if (!location) {
+            alert("Please enter a location.");
+            return;
+        }
+    
+        // Fetch geolocation data from OpenStreetMap API
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`;
+    
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    const lat = data[0].lat;
+                    const lon = data[0].lon;
+    
+                    // Populate hidden fields
+                    document.getElementById('lat').value = lat;
+                    document.getElementById('lon').value = lon;
+    
+                    // Submit the form
+                    this.submit();
+                } else {
+                    alert("Location not found. Please try again.");
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching location:", error);
+                alert("An error occurred. Please try again.");
+            });
+    });
+    
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const dropdownButton = document.getElementById('profileDropdownButton');
+        const dropdownMenu = document.getElementById('profileDropdownMenu');
+
+        dropdownButton.addEventListener('click', () => {
+            if (dropdownMenu.classList.contains('hidden')) {
+                dropdownMenu.classList.remove('hidden');
+            } else {
+                dropdownMenu.classList.add('hidden');
+            }
+        });
+
+        // Optional: Close dropdown when clicking outside
+        document.addEventListener('click', (event) => {
+            if (!dropdownButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                dropdownMenu.classList.add('hidden');
+            }
+        });
+    });
+
+    const locationSearch = document.getElementById('location-search');
+    const resultsContainer = document.getElementById('location-results');
+    
+    // Handle input and fetch location suggestions
+    locationSearch.addEventListener('input', async function () {
+        const query = this.value;
+        if (query.length > 2) {
+            // Fetch location suggestions from OpenStreetMap API (or replace with your API)
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${query}`);
+            const results = await response.json();
+            
+            resultsContainer.innerHTML = results.map(result => `<li class="p-2 cursor-pointer hover:bg-gray-200 z-20" 
+         data-location="${result.display_name}" 
+         data-lat="${result.lat}" 
+         data-lon="${result.lon}">
+        ${result.display_name}
+    </li>`
+).join('');
+
+            resultsContainer.classList.remove('hidden');
+        } else {
+            resultsContainer.classList.add('hidden');
+        }
+    });
+
+    // Handle click on a suggestion
+    resultsContainer.addEventListener('click', function (e) {
+        const selected = e.target;
+        const location = selected.getAttribute('data-location');
+        const lat = selected.getAttribute('data-lat');
+        const lon = selected.getAttribute('data-lon');
+    
+        // Update the location input field
+        locationSearch.value = location;
+    
+        // Update hidden fields
+        document.getElementById('lat').value = lat;
+        document.getElementById('lon').value = lon;
+    
+        resultsContainer.classList.add('hidden');
+    });
+    
+    // Optional: Close dropdown when clicking outside
+    document.addEventListener('click', (event) => {
+        if (!locationSearch.contains(event.target) && !resultsContainer.contains(event.target)) {
+            resultsContainer.classList.add('hidden');
+        }
+    });
+</script>
+
+</html>

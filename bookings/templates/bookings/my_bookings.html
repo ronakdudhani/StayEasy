@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto mt-8">
+    <h2 class="text-2xl font-semibold mb-6">My Bookings</h2>
+
+    {% if bookings %}
+        <div class="space-y-4">
+            {% for booking in bookings %}
+                <div class="p-4 border border-gray-300 rounded-md shadow-md">
+                    <h3 class="text-xl font-semibold">{{ booking.property.name }}</h3>
+                    <p><strong>Check-in:</strong> {{ booking.checkin_date }}</p>
+                    <p><strong>Check-out:</strong> {{ booking.checkout_date }}</p>
+                    <p><strong>Guests:</strong> {{ booking.guests }}</p>
+                    <p><strong>Total Price:</strong> ${{ booking.total_price }}</p>
+
+                    <a href="{% url 'bookings:cancel_booking' booking.id %}"
+                       class="text-red-500 mt-4 inline-block"
+                       onclick="return confirm('Are you sure you want to cancel this booking?')">
+                        Cancel Booking
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>You have no bookings yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

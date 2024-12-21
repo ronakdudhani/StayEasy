@@ -1,0 +1,142 @@
+{% load custom_filters %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ property.name }} - StayEasy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="font-sans antialiased ">
+    <!-- Navigation from base.html -->
+    {% include 'base.html' %}
+
+    <div class="container mx-auto mt-8 px-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Property Details Section -->
+            <div class="md:col-span-2">
+                <img src="{{ property.image_url }}" alt="{{ property.name }}"
+                    class="w-full h-64 object-cover rounded-lg shadow-md">
+                <h1 class="text-2xl font-bold mt-4">{{ property.name }}</h1>
+                <p class="text-gray-500">{{ property.location }}</p>
+                <p class="text-red-500 text-xl font-semibold mt-2">${{ property.price }}/night</p>
+                <p class="mt-4">{{ property.description }}</p>
+
+                {% comment %} <!-- Availability -->
+                <p class="text-gray-600 mt-4">
+                    Available from <strong>{{ property.availability_start }}</strong> to <strong>{{ property.availability_end }}</strong>.
+                </p> {% endcomment %}
+
+                <!-- Booked Dates -->
+                {% if property.booked_dates %}
+                <div class="mt-4">
+                    <h3 class="font-semibold text-lg">Booked Dates:</h3>
+                    <ul class="list-disc pl-6">
+                        {% for booked_date in property.booked_dates %}
+                        <li>{{ booked_date }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Host Information -->
+                <div class="mt-4">
+                    <h3 class="font-semibold text-lg">Hosted By:</h3>
+                    <p>{{ property.user}}</p>
+                </div>
+
+                <!-- Amenities -->
+                <div class="mt-4">
+                    <h3 class="font-semibold text-lg">Amenities:</h3>
+                    <ul class="list-disc pl-6">
+                        {% for amenity in property.amenities|split %}
+                        <li>{{ amenity }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Rules -->
+                <div class="mt-4">
+                    <h3 class="font-semibold text-lg">House Rules:</h3>
+                    <ul class="list-disc pl-6">
+                        {% for rule in property.rules|split %}
+                        <li>{{ rule }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Map -->
+                <div id="map" class="w-full h-64 mt-4 rounded-lg shadow-md"></div>
+            </div>
+
+            <!-- Booking Section -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">Book This Property</h2>
+                <form id="booking-form" method="post">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label for="checkin_date" class="block text-sm text-gray-700">Check-in</label>
+                        <input type="date" id="checkin_date" name="checkin_date" required
+                            class="w-full border rounded-md p-2 mt-1">
+                    </div>
+                    <div class="mb-4">
+                        <label for="checkout_date" class="block text-sm text-gray-700">Check-out</label>
+                        <input type="date" id="checkout_date" name="checkout_date" required
+                            class="w-full border rounded-md p-2 mt-1">
+                    </div>
+                    <div class="mb-4">
+                        <label for="guests" class="block text-sm text-gray-700">Number of Guests</label>
+                        <input type="number" id="guests" name="guests" min="1" required
+                            class="w-full border rounded-md p-2 mt-1">
+                    </div>
+
+                    <!-- Book Now Button -->
+                    <a href="#" id="book-now-button" class="w-full bg-red-500 text-white py-2 px-4 rounded-md text-center">
+                        Book Now
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include a script to load the map -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const lat = {{ property.latitude }};
+            const lng = {{ property.longitude }};
+            const map = L.map('map').setView([lat, lng], 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            L.marker([lat, lng]).addTo(map).bindPopup("{{ property.name }}").openPopup();
+
+            // Handle the Book Now button click
+            const bookNowButton = document.getElementById('book-now-button');
+            bookNowButton.addEventListener('click', function (event) {
+                event.preventDefault();  // Prevent the default form submission
+                
+                // Capture the values from the form fields
+                const checkinDate = document.getElementById('checkin_date').value;
+                const checkoutDate = document.getElementById('checkout_date').value;
+                const guests = document.getElementById('guests').value;
+
+                // Construct the URL with query parameters
+                const url = "{% url 'bookings:book_property' property.id %}?checkin_date=" + encodeURIComponent(checkinDate) +
+                            "&checkout_date=" + encodeURIComponent(checkoutDate) +
+                            "&guests=" + encodeURIComponent(guests);
+
+                // Redirect to the booking page with query parameters
+                window.location.href = url;
+            });
+        });
+    </script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</body>
+
+</html>

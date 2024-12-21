@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load form_tags %}
+
+{% block content %}
+<div class="container mx-auto py-8 px-8">
+    <h2 class="text-2xl font-bold mb-4">Add a Property</h2>
+    <div class="flex flex-wrap lg:flex-nowrap gap-8">
+        
+        <!-- Form Section -->
+        <div class="w-full lg:w-2/3">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Property Information -->
+                <fieldset class="border p-4 rounded-md">
+                    <legend class="font-semibold text-lg text-gray-700">Property Information</legend>
+
+                    <!-- Property Name -->
+                    <div class="flex items-center gap-4 mb-4">
+                        <label for="id_name" class="block text-sm font-medium text-gray-700 w-1/4">Property Name</label>
+                        <div class="w-full border-2 border-gray-300 p-2 rounded-md">
+                            {{ form.name|add_class:"form-control w-full px-4 py-2 border-2 border-gray-300 rounded-md" }}
+                        </div>
+                    </div>
+                    
+                    <!-- Price -->
+                    <div class="flex items-center gap-4 mb-4">
+                        <label for="id_price" class="block text-sm font-medium text-gray-700 w-1/4">Price (per night)</label>
+                        <div class="w-full border-2 border-gray-300 p-2 rounded-md">
+                            {{ form.price|add_class:"form-control w-full px-4 py-2 border-2 border-gray-300 rounded-md" }}
+                        </div>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="flex items-center gap-4 mb-4">
+                        <label for="id_address" class="block text-sm font-medium text-gray-700 w-1/4">Address</label>
+                        <div class="w-full border-2 border-gray-300 p-2 rounded-md">
+                            {{ form.address|add_class:"form-control w-full px-4 py-2 border-2 border-gray-300 rounded-md" }}
+                        </div>
+                    </div>
+
+                    <!-- Image URL -->
+                    <div class="flex items-center gap-4 mb-4">
+                        <label for="id_images" class="block text-sm font-medium text-gray-700 w-1/4">Image URL</label>
+                        <div class="w-full border-2 border-gray-300 p-2 rounded-md">
+                            {{ form.image_url|add_class:"form-control w-full px-4 py-2 border-2 border-gray-300 rounded-md" }}
+                        </div>
+                    </div>
+
+                    <!-- Latitude and Longitude -->
+                    <div class="flex gap-4 mb-4">
+                        <div class="w-1/2">
+                            <label for="id_latitude" class="block text-sm font-medium text-gray-700">Latitude</label>
+                            <input type="text" id="id_latitude" name="latitude" readonly
+                                   class="form-control w-full px-4 py-2 border-2 border-gray-300 rounded-md bg-gray-100 text-gray-500">
+                        </div>
+                        <div class="w-1/2">
+                            <label for="id_longitude" class="block text-sm font-medium text-gray-700">Longitude</label>
+                            <input type="text" id="id_longitude" name="longitude" readonly
+                                   class="form-control w-full px-4 py-2 border-2 border-gray-300 rounded-md bg-gray-100 text-gray-500">
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div>
+                        <button type="submit" name="next"
+                                class="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">
+                            Next
+                        </button>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+        
+        <!-- Address Search and Map Section -->
+        <div class="w-full lg:w-1/3">
+            <div>
+                <!-- Address Search -->
+                <label for="address-search" class="font-semibold block mb-2">Search Address:</label>
+                <input id="address-search" type="text"
+                       class="form-control w-full mb-4 px-4 py-2 border-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Search for an address">
+                <ul id="address-results" class="bg-white border rounded shadow-lg hidden max-h-60 overflow-auto"></ul>
+            </div>
+
+            <!-- Map -->
+            <div id="map" class="w-full h-64 mt-4 border"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const addressSearch = document.getElementById('address-search');
+    const resultsContainer = document.getElementById('address-results');
+    const addressInput = document.getElementById("id_address");
+    const latitudeInput = document.getElementById('id_latitude');
+    const longitudeInput = document.getElementById('id_longitude');
+    const mapContainer = document.getElementById('map');
+    
+    let map;
+    let marker;
+
+    // Initialize map
+    function initMap() {
+        map = L.map(mapContainer).setView([20, 78], 5); // Default to India
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+    }
+
+    // Add event listener to search field
+    addressSearch.addEventListener('input', async function () {
+        const query = this.value;
+        if (query.length > 2) {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${query}`);
+            const results = await response.json();
+            
+            resultsContainer.innerHTML = results.map(result => 
+                `<li class="p-2 cursor-pointer hover:bg-gray-200" data-lat="${result.lat}" data-lon="${result.lon}">
+                    ${result.display_name}
+                </li>`).join('');
+            resultsContainer.classList.remove('hidden');
+        }
+    });
+
+    // Handle address selection
+    resultsContainer.addEventListener('click', function (e) {
+        const selected = e.target;
+        const lat = selected.getAttribute('data-lat');
+        const lon = selected.getAttribute('data-lon');
+        const displayName = selected.innerText || " ";
+
+        addressInput.value = displayName;
+        latitudeInput.value = lat;
+        longitudeInput.value = lon;
+
+        map.setView([lat, lon], 15);
+        if (marker) marker.remove();
+        marker = L.marker([lat, lon]).addTo(map);
+
+        resultsContainer.classList.add('hidden');
+    });
+
+    initMap();
+</script>
+{% endblock %}

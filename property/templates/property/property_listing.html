@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Map Section -->
+    {% if lat and lon %}
+    <div id="map" class="w-full h-64 mb-8 z-1"></div>
+    <script>
+        var map = L.map('map').setView([{{ lat }}, {{ lon }}], 10);  // Center map on search location
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Add marker for the search location
+        L.marker([{{ lat }}, {{ lon }}]).addTo(map)
+            .bindPopup("Searched Location")
+            .openPopup();
+
+        {% for item in properties %}
+            L.marker([{{ item.property.latitude }}, {{ item.property.longitude }}]).addTo(map)
+                .bindPopup("{{ item.property.name }}<br>Distance: {{ item.distance|floatformat:2 }} km")
+                .openPopup();
+        {% endfor %}
+    </script>
+    {% endif %}
+
+    <!-- Categories Section -->
+    <h2 class="text-2xl font-bold mb-4">Categories</h2>
+    <div class="flex space-x-4 mb-6">
+        <a href="{% url 'home' %}" class="px-4 py-2 bg-gray-200 rounded {% if not selected_category %}bg-gray-300{% endif %}">
+            All
+        </a>
+        
+        {% for category in categories %}
+        <a href="?category={{ category|lower }}" 
+   class="px-4 py-2 bg-gray-200 rounded {% if category|lower == selected_category %}bg-gray-300{% endif %}">
+    {{ category }}
+</a>
+
+        {% endfor %}
+    </div>
+
+    <!-- Sorting Section -->
+    <div class="mb-6">
+        <label for="sort_by" class="font-semibold">Sort by:</label>
+        <select id="sort_by" class="ml-2 p-2 border rounded" onchange="window.location.href='?{% if selected_category %}category={{ selected_category }}&{% endif %}sort_by='+this.value">
+            <option value="">Default</option>
+            <option value="price_low_to_high" {% if sort_by == "price_low_to_high" %}selected{% endif %}>Price: Low to High</option>
+            <option value="price_high_to_low" {% if sort_by == "price_high_to_low" %}selected{% endif %}>Price: High to Low</option>
+        </select>
+    </div>
+
+    <!-- Property Listings -->
+    <h2 class="text-3xl font-bold mb-6">Explore Properties</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {% for item in properties %}
+<a href="{% url 'property:detail' item.property.id  %}" class="bg-white rounded-lg shadow-md overflow-hidden hover:scale-105 transition-transform duration-300 block">
+    <img src="{{ item.property.image_url }}" alt="{{ item.property.name }}" class="w-full h-48 object-cover">
+    <div class="p-4">
+        <h3 class="text-lg font-semibold">{{ item.property.name }}</h3>
+        <p class="text-gray-600">{{ item.property.location }}</p>
+        <p class="mt-2 font-bold">₹{{ item.property.price }} <span class="text-sm">/night</span></p>
+        {% if item.distance %}
+            <p class="text-sm">Distance: {{ item.distance|floatformat:2 }} km</p>
+        {% else %}
+            <p class="text-sm">Distance: Not available</p>
+        {% endif %}
+    </div>
+    <div class="p-4 border-t text-sm text-gray-500">
+        ⭐ 4.8 | {{ item.property.category|title }}
+    </div>
+</a>
+{% empty %}
+    <p>No properties found matching your filters.</p>
+{% endfor %}
+
+    </div>
+</div>
+{% endblock %}
